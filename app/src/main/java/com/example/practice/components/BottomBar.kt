@@ -5,43 +5,44 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 
 @Composable
 fun BottomBar(navController: NavController) {
+    val currentRoute = navController.currentDestination?.route
 
     NavigationBar {
-
         NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("expenses") },
-            icon = { Icon(Icons.Default.Receipt, null) },
-            label = { Text("Expenses") }
-        )
-
-        NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("incomes") },
+            selected = currentRoute == "incomes",
+            onClick = { navController.navigate("incomes") { launchSingleTop = true } },
             icon = { Icon(Icons.Default.AttachMoney, null) },
-            label = { Text("Income") }
+            label = { Text("My Income") }
         )
 
         NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("home") },
+            selected = currentRoute == "expenses",
+            onClick = { navController.navigate("expenses") { launchSingleTop = true } },
+            icon = { Icon(Icons.AutoMirrored.Filled.ReceiptLong, null) },
+            label = { Text("My Expense") }
+        )
+
+        NavigationBarItem(
+            selected = currentRoute == "home",
+            onClick = { navController.navigate("home") { launchSingleTop = true } },
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text("Home") }
+            label = { Text("Homepage") }
         )
 
         NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("budgets") },
+            selected = currentRoute == "budgets",
+            onClick = { navController.navigate("budgets") { launchSingleTop = true } },
             icon = { Icon(Icons.Default.AccountBalanceWallet, null) },
-            label = { Text("Budgets") }
+            label = { Text("My Budget") }
         )
 
         NavigationBarItem(
-            selected = false,
-            onClick = { navController.navigate("reports") },
+            selected = currentRoute == "reports",
+            onClick = { navController.navigate("reports") { launchSingleTop = true } },
             icon = { Icon(Icons.Default.BarChart, null) },
             label = { Text("Reports") }
         )

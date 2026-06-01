@@ -5,99 +5,116 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.practice.data.IncomeCategoryRepository
 import com.example.practice.data.IncomeRepository
 import com.example.practice.model.Income
 import com.example.practice.model.IncomeCategory
+import com.example.practice.ui.components.ScreenWrapper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddIncomeScreen(
-    onSaveDone: () -> Unit = {},
-    onAddCategory: () -> Unit = {}
+    navController: NavController,
+    onSaveDone: () -> Unit,
+    onAddCategory: () -> Unit
 ) {
-
     val repo = remember { IncomeRepository() }
     val catRepo = remember { IncomeCategoryRepository() }
 
-    var title by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<IncomeCategory?>(null) }
     var categories by remember { mutableStateOf(listOf<IncomeCategory>()) }
-
     var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         catRepo.getCategories { categories = it }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
+    ScreenWrapper(
+        title = "Add New Income",
+        navController = navController,
+        showBottomBar = false
     ) {
-
-        Text("Add Income", style = MaterialTheme.typography.headlineMedium)
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedTextField(title, { title = it }, label = { Text("Title") })
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 🔥 CATEGORY DROPDOWN
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it }
-        ) {
-
+        Column(modifier = Modifier.padding(16.dp)) {
             OutlinedTextField(
-                value = selectedCategory?.title ?: "",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Category") },
-                modifier = Modifier.menuAnchor()
+                value = date,
+                onValueChange = { date = it },
+                label = { Text("Date") },
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it },
+                label = { Text("Amount") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
 
-            ExposedDropdownMenu(
+            OutlinedButton(onClick = { /* Implement Upload logic */ }, modifier = Modifier.fillMaxWidth()) {
+                Text("Upload Document/Image")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onExpandedChange = { expanded = it }
             ) {
-
-                // 🔥 ADD CATEGORY BUTTON
-                DropdownMenuItem(
-                    text = { Text("+ Add Category") },
-                    onClick = {
-                        expanded = false
-                        onAddCategory()
-                    }
+                OutlinedTextField(
+                    value = selectedCategory?.title ?: "Select Category",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
-
-                categories.forEach { cat ->
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("${cat.icon} ${cat.title}") },
+                        text = { Text("+ Create Category", color = MaterialTheme.colorScheme.primary) },
                         onClick = {
-                            selectedCategory = cat
                             expanded = false
+                            onAddCategory()
                         }
                     )
+                    categories.forEach { cat ->
+                        DropdownMenuItem(
+                            text = { Text(cat.title) },
+                            onClick = {
+                                selectedCategory = cat
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
-        Button(onClick = {
-            repo.addIncome(
-                Income(
-                    title = title,
-                    date = "",
-                    amount = "",
-                    description = selectedCategory?.title ?: ""
-                )
-            )
-            onSaveDone()
-        }) {
-            Text("Save Income")
+            Button(
+                onClick = {
+                    repo.addIncome(Income(
+                        amount = amount,
+                        date = date,
+                        description = description,
+                        category = selectedCategory?.title ?: "General",
+                        title = description
+                    ))
+                    onSaveDone()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Income")
+            }
         }
     }
 }

@@ -23,7 +23,6 @@ class AuthViewModel : ViewModel() {
     }
 
     fun login(email: String, password: String) {
-
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Fields cannot be empty")
             return
@@ -32,17 +31,16 @@ class AuthViewModel : ViewModel() {
         _authState.value = AuthState.Loading
 
         auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
                     _authState.value = AuthState.Authenticated
                 } else {
-                    _authState.value = AuthState.Error("Login failed")
+                    _authState.value = AuthState.Error(task.exception?.message ?: "Login failed")
                 }
             }
     }
 
     fun signup(email: String, password: String) {
-
         if (email.isBlank() || password.isBlank()) {
             _authState.value = AuthState.Error("Fields cannot be empty")
             return
@@ -51,12 +49,11 @@ class AuthViewModel : ViewModel() {
         _authState.value = AuthState.Loading
 
         auth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    auth.signOut()
-                    _authState.value = AuthState.Error("Signup successful")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    _authState.value = AuthState.Authenticated
                 } else {
-                    _authState.value = AuthState.Error("Signup failed")
+                    _authState.value = AuthState.Error(task.exception?.message ?: "Signup failed")
                 }
             }
     }

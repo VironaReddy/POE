@@ -12,24 +12,26 @@ class IncomeRepository {
     fun addIncome(income: Income) {
         ref.add(income)
             .addOnSuccessListener {
-                Log.d("IncomeRepo", "Income saved successfully")
+                Log.d("IncomeRepo", "Income saved")
             }
             .addOnFailureListener {
-                Log.e("IncomeRepo", "Failed to save income: ${it.message}")
+                Log.e("IncomeRepo", "Error: ${it.message}")
             }
     }
 
     fun getIncomes(onResult: (List<Income>) -> Unit) {
-        ref.get()
-            .addOnSuccessListener { snapshot ->
-                val list = snapshot.documents.mapNotNull {
-                    it.toObject(Income::class.java)
-                }
-                onResult(list)
-            }
-            .addOnFailureListener {
-                Log.e("IncomeRepo", "Failed to load incomes: ${it.message}")
+        ref.addSnapshotListener { snapshot, error ->
+
+            if (error != null || snapshot == null) {
                 onResult(emptyList())
+                return@addSnapshotListener
             }
+
+            val list = snapshot.documents.mapNotNull {
+                it.toObject(Income::class.java)
+            }
+
+            onResult(list)
+        }
     }
 }

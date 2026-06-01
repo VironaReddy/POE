@@ -12,7 +12,6 @@ class ExpenseCategoryRepository {
         ref.add(category)
     }
 
-    // ✅ FIXED: REAL-TIME LISTENER
     fun getCategories(onResult: (List<ExpenseCategory>) -> Unit) {
         ref.addSnapshotListener { snapshot, error ->
 

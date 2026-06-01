@@ -1,118 +1,70 @@
 package com.example.practice.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.practice.data.ExpenseCategoryRepository
 import com.example.practice.model.ExpenseCategory
-import com.example.practice.ui.components.iconList
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.practice.ui.components.ScreenWrapper
 
 @Composable
 fun CreateExpenseCategoryScreen(
-    onDone: () -> Unit
+    navController: NavController
 ) {
-
     val repo = remember { ExpenseCategoryRepository() }
-
     var title by remember { mutableStateOf("") }
-    var selectedIcon by remember { mutableStateOf<ImageVector?>(null) }
-    var showPicker by remember { mutableStateOf(false) }
+    var selectedIcon by remember { mutableStateOf("💰") }
+    
+    val icons = listOf("💰", "🍔", "🚗", "🏠", "🎮", "🛍️", "📚", "💊", "✈️", "🎓")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
+    ScreenWrapper(
+        title = "Create Expense Category",
+        navController = navController,
+        showBottomBar = false
     ) {
-
-        Text("Create Expense Category", style = MaterialTheme.typography.headlineMedium)
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Category Title") }
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(onClick = { showPicker = true }) {
-            Text("Select Icon")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = "Selected: ${selectedIcon?.name ?: "None"}"
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(onClick = {
-            repo.addCategory(
-                ExpenseCategory(
-                    title = title,
-                    icon = selectedIcon?.name ?: ""
-                )
+        Column(modifier = Modifier.padding(16.dp)) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Category Name") },
+                modifier = Modifier.fillMaxWidth()
             )
-            onDone()
-        }) {
-            Text("Save Category")
-        }
-    }
 
-    // ICON PICKER POPUP
-    if (showPicker) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Dialog(onDismissRequest = { showPicker = false }) {
-
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 8.dp
+            Text("Select an Icon", style = MaterialTheme.typography.titleMedium)
+            
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 50.dp),
+                modifier = Modifier.weight(1f).padding(vertical = 8.dp)
             ) {
-
-                Column(modifier = Modifier.padding(10.dp)) {
-
-                    Text("Select Icon")
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
-                        modifier = Modifier.height(300.dp)
-                    ) {
-
-                        items(iconList) { icon ->
-
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .size(30.dp)
-                                    .clickable {
-                                        selectedIcon = icon
-                                        showPicker = false
-                                    }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    TextButton(onClick = { showPicker = false }) {
-                        Text("Close")
-                    }
+                items(icons) { icon ->
+                    FilterChip(
+                        selected = selectedIcon == icon,
+                        onClick = { selectedIcon = icon },
+                        label = { Text(icon, style = MaterialTheme.typography.headlineSmall) },
+                        modifier = Modifier.padding(4.dp)
+                    )
                 }
+            }
+
+            Button(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        repo.addCategory(ExpenseCategory(title = title, icon = selectedIcon))
+                        navController.popBackStack()
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Category")
             }
         }
     }

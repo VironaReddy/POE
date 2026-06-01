@@ -1,117 +1,90 @@
 package com.example.practice.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.practice.data.IncomeCategoryRepository
 import com.example.practice.model.IncomeCategory
-import com.example.practice.ui.components.iconList
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.shape.RoundedCornerShape
-
+import com.example.practice.ui.components.ScreenWrapper
 
 @Composable
 fun CreateIncomeCategoryScreen(
-    onDone: () -> Unit
+    navController: NavController
 ) {
-
     val repo = remember { IncomeCategoryRepository() }
-
     var title by remember { mutableStateOf("") }
-    var selectedIcon by remember { mutableStateOf<ImageVector?>(null) }
-    var showPicker by remember { mutableStateOf(false) }
+    var selectedIcon by remember { mutableStateOf("💰") }
+    var categories by remember { mutableStateOf(emptyList<IncomeCategory>()) }
+    
+    val icons = listOf("💰", "📈", "🏦", "💼", "💵", "🪙", "💹", "🎁", "🧧", "💎")
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
-    ) {
-
-        Text("Create Income Category", style = MaterialTheme.typography.headlineMedium)
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Category Title") }
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Button(onClick = { showPicker = true }) {
-            Text("Select Icon")
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text("Selected: ${selectedIcon?.name ?: "None"}")
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(onClick = {
-            repo.addCategory(
-                IncomeCategory(
-                    title = title,
-                    icon = selectedIcon?.name ?: ""
-                )
-            )
-            onDone()
-        }) {
-            Text("Save Category")
-        }
+    LaunchedEffect(Unit) {
+        repo.getCategories { categories = it }
     }
 
-    if (showPicker) {
+    ScreenWrapper(
+        title = "Create Income Category",
+        navController = navController,
+        showBottomBar = false
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Category Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Dialog(onDismissRequest = { showPicker = false }) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 8.dp
+            Text("Select an Icon", style = MaterialTheme.typography.titleMedium)
+            
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 50.dp),
+                modifier = Modifier.height(120.dp).padding(vertical = 8.dp)
             ) {
+                items(icons) { icon ->
+                    FilterChip(
+                        selected = selectedIcon == icon,
+                        onClick = { selectedIcon = icon },
+                        label = { Text(icon, style = MaterialTheme.typography.headlineSmall) },
+                        modifier = Modifier.padding(4.dp)
+                    )
+                }
+            }
 
-                Column(modifier = Modifier.padding(10.dp)) {
-
-                    Text("Select Icon")
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
-                        modifier = Modifier.height(300.dp)
-                    ) {
-
-                        items(iconList) { icon ->
-
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .size(30.dp)
-                                    .clickable {
-                                        selectedIcon = icon
-                                        showPicker = false
-                                    }
-                            )
-                        }
+            Button(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        repo.addCategory(IncomeCategory(title = title, icon = selectedIcon))
+                        title = "" // Clear after adding
                     }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Category")
+            }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Existing Categories", style = MaterialTheme.typography.titleMedium)
 
-                    TextButton(onClick = { showPicker = false }) {
-                        Text("Close")
-                    }
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(categories) { cat ->
+                    ListItem(
+                        headlineContent = { Text(cat.title) },
+                        leadingContent = { Text(cat.icon, style = MaterialTheme.typography.headlineSmall) }
+                    )
+                    HorizontalDivider()
                 }
             }
         }
     }
 }
-
-

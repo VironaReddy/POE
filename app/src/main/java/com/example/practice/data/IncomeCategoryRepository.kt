@@ -13,10 +13,17 @@ class IncomeCategoryRepository {
     }
 
     fun getCategories(onResult: (List<IncomeCategory>) -> Unit) {
-        ref.get().addOnSuccessListener { snap ->
-            val list = snap.documents.mapNotNull {
-                it.toObject(IncomeCategory::class.java)
+        ref.addSnapshotListener { snapshot, error ->
+
+            if (error != null || snapshot == null) {
+                onResult(emptyList())
+                return@addSnapshotListener
             }
+
+            val list = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(IncomeCategory::class.java)
+            }
+
             onResult(list)
         }
     }
