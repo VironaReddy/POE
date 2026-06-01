@@ -38,10 +38,13 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.navigation.compose)
 
-    // 🔥 FIREBASE (FINAL FIX)
+    // 🔥 FIREBASE
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // 🔥 COIL FOR IMAGES
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Compose extras
     implementation("androidx.compose.runtime:runtime-livedata")

@@ -1,5 +1,8 @@
 package com.example.practice.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,10 +27,19 @@ fun AddExpenseScreen(
 
     var amount by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("") }
+    var endTime by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ExpenseCategory?>(null) }
     var categories by remember { mutableStateOf(listOf<ExpenseCategory>()) }
     var expanded by remember { mutableStateOf(false) }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        photoUri = uri
+    }
 
     LaunchedEffect(Unit) {
         catRepo.getCategories { categories = it }
@@ -36,34 +48,50 @@ fun AddExpenseScreen(
     ScreenWrapper(
         title = "Add New Expense",
         navController = navController,
-        showBottomBar = false // Hide bottom bar on entry forms to focus on input
+        showBottomBar = false
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             OutlinedTextField(
                 value = date,
                 onValueChange = { date = it },
-                label = { Text("Date") },
+                label = { Text("Date (e.g. 2024-10-25)") },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = startTime,
+                    onValueChange = { startTime = it },
+                    label = { Text("Start Time") },
+                    modifier = Modifier.weight(1f).padding(end = 4.dp)
+                )
+                OutlinedTextField(
+                    value = endTime,
+                    onValueChange = { endTime = it },
+                    label = { Text("End Time") },
+                    modifier = Modifier.weight(1f).padding(start = 4.dp)
+                )
+            }
             OutlinedTextField(
                 value = amount,
                 onValueChange = { amount = it },
-                label = { Text("Amount") },
+                label = { Text("Amount (R)") },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
                 modifier = Modifier.fillMaxWidth()
             )
+            
             Spacer(Modifier.height(8.dp))
 
-            // Upload Feature Placeholder
-            OutlinedButton(onClick = { /* Implement Upload logic */ }, modifier = Modifier.fillMaxWidth()) {
-                Text("Upload Document/Image")
+            Button(
+                onClick = { launcher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text(if (photoUri == null) "Add Photograph (Optional)" else "Photo Attached ✅")
             }
 
             Spacer(Modifier.height(8.dp))
@@ -81,7 +109,7 @@ fun AddExpenseScreen(
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("+ Create Category", color = MaterialTheme.colorScheme.primary) },
+                        text = { Text("+ Create Category") },
                         onClick = {
                             expanded = false
                             onAddCategory()
@@ -89,7 +117,7 @@ fun AddExpenseScreen(
                     )
                     categories.forEach { cat ->
                         DropdownMenuItem(
-                            text = { Text(cat.title) },
+                            text = { Text("${cat.icon} ${cat.title}") },
                             onClick = {
                                 selectedCategory = cat
                                 expanded = false
@@ -99,16 +127,19 @@ fun AddExpenseScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
                     repo.addExpense(Expense(
                         amount = amount,
                         date = date,
+                        startTime = startTime,
+                        endTime = endTime,
                         description = description,
                         category = selectedCategory?.title ?: "General",
-                        title = description // Using description as title for simplicity
+                        title = description,
+                        photoUri = photoUri?.toString() ?: ""
                     ))
                     onSaveDone()
                 },

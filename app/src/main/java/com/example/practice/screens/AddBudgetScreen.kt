@@ -19,10 +19,13 @@ fun AddBudgetScreen(
     onSaveDone: () -> Unit,
     onAddCategory: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
+    var minLimit by remember { mutableStateOf("") }
+    var maxLimit by remember { mutableStateOf("") }
     var dateRange by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    
     var selectedCategory by remember { mutableStateOf<BudgetCategory?>(null) }
     var categories by remember { mutableStateOf(listOf<BudgetCategory>()) }
     var expanded by remember { mutableStateOf(false) }
@@ -35,44 +38,22 @@ fun AddBudgetScreen(
     }
 
     ScreenWrapper(
-        title = "Add New Budget",
+        title = "Set Spending Goals",
         navController = navController,
         showBottomBar = false
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            OutlinedTextField(
-                value = dateRange,
-                onValueChange = { dateRange = it },
-                label = { Text("Date") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Budget Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text("Amount") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("Define your spending goals for a category.", style = MaterialTheme.typography.bodyMedium)
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(onClick = { /* Implement Upload logic */ }, modifier = Modifier.fillMaxWidth()) {
-                Text("Upload Document/Image")
-            }
-
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Budget Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
             Spacer(modifier = Modifier.height(8.dp))
 
             ExposedDropdownMenuBox(
@@ -84,7 +65,8 @@ fun AddBudgetScreen(
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
@@ -96,7 +78,7 @@ fun AddBudgetScreen(
                     )
                     categories.forEach { cat ->
                         DropdownMenuItem(
-                            text = { Text(cat.title) },
+                            text = { Text("${cat.icon} ${cat.title}") },
                             onClick = {
                                 selectedCategory = cat
                                 expanded = false
@@ -106,24 +88,73 @@ fun AddBudgetScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = amount,
+                onValueChange = { amount = it },
+                label = { Text("Total Budget Amount (R)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = minLimit,
+                    onValueChange = { minLimit = it },
+                    label = { Text("Min Goal") },
+                    modifier = Modifier.weight(1f).padding(end = 4.dp)
+                )
+                OutlinedTextField(
+                    value = maxLimit,
+                    onValueChange = { maxLimit = it },
+                    label = { Text("Max Limit") },
+                    modifier = Modifier.weight(1f).padding(start = 4.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = dateRange,
+                onValueChange = { dateRange = it },
+                label = { Text("Period (e.g. 2024-10)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    budgetRepo.addBudget(
-                        Budget(
-                            title = name,
-                            amount = amount,
-                            category = selectedCategory?.title ?: "General",
-                            description = description,
-                            dateRange = dateRange
+                    if (selectedCategory != null) {
+                        budgetRepo.addBudget(
+                            Budget(
+                                title = title,
+                                category = selectedCategory!!.title,
+                                amount = amount,
+                                minLimit = minLimit,
+                                maxLimit = maxLimit,
+                                dateRange = dateRange,
+                                description = description
+                            )
                         )
-                    )
-                    onSaveDone()
+                        onSaveDone()
+                    }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = title.isNotBlank() && amount.isNotBlank() && selectedCategory != null
             ) {
-                Text("Save Budget")
+                Text("Save Budget Goal")
             }
         }
     }
