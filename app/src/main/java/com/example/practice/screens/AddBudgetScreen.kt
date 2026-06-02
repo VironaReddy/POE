@@ -36,7 +36,7 @@ fun AddBudgetScreen(
     }
 
     ScreenWrapper(
-        title = "Add Budget Goal",
+        title = "Set Budget Goal",
         navController = navController,
         showBottomBar = false
     ) {
@@ -80,7 +80,6 @@ fun AddBudgetScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Budget amount
             OutlinedTextField(
                 value = budgetAmount,
                 onValueChange = { budgetAmount = it },
@@ -90,25 +89,23 @@ fun AddBudgetScreen(
             
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Min goal and Max goal
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = minGoal,
                     onValueChange = { minGoal = it },
-                    label = { Text("Min Goal") },
+                    label = { Text("Min Goal (R)") },
                     modifier = Modifier.weight(1f).padding(end = 4.dp)
                 )
                 OutlinedTextField(
                     value = maxGoal,
                     onValueChange = { maxGoal = it },
-                    label = { Text("Max Goal") },
+                    label = { Text("Max Goal (R)") },
                     modifier = Modifier.weight(1f).padding(start = 4.dp)
                 )
             }
             
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Description
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
@@ -128,7 +125,6 @@ fun AddBudgetScreen(
                                 minLimit = minGoal,
                                 maxLimit = maxGoal,
                                 description = description
-                                // Title and Period removed as per requirement 11
                             )
                         )
                         onSaveDone()

@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +26,7 @@ import com.example.practice.data.ExpenseRepository
 import com.example.practice.model.Budget
 import com.example.practice.model.Expense
 import com.example.practice.ui.components.ScreenWrapper
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,33 +36,31 @@ fun ReportsScreen(navController: NavController) {
 
     var expenses by remember { mutableStateOf(listOf<Expense>()) }
     var budgets by remember { mutableStateOf(listOf<Budget>()) }
-    var selectedMonth by remember { mutableStateOf("10/24") } // Matches DD/MM/YY pattern
-    var expanded by remember { mutableStateOf(false) }
-
-    val months = listOf("09/24", "10/24", "11/24", "12/24")
     
-    // List state for scroll monitoring
+    var selectedPeriod by remember { mutableStateOf("This Month") }
+    var expanded by remember { mutableStateOf(false) }
+    val periods = listOf("This Week", "This Month", "Last Month", "Custom Dates")
+    
     val listState = rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        // These repositories use addSnapshotListener, so they update automatically
         expenseRepo.getExpenses { expenses = it }
         budgetRepo.getBudgets { budgets = it }
     }
 
-    // Filter expenses for the selected period
-    val filteredExpenses = expenses.filter { it.date.endsWith(selectedMonth) }
-    
-    // Group daily spending for the Timeline Graph
-    val dailySpending = filteredExpenses.groupBy { 
-        it.date.split("/").firstOrNull() ?: "01" 
-    }.mapValues { entry -> 
-        entry.value.sumOf { it.amount.toDoubleOrNull() ?: 0.0 } 
+    val filteredExpenses = expenses.filter { 
+        when(selectedPeriod) {
+            "This Month" -> it.date.contains("/10/") 
+            "Last Month" -> it.date.contains("/09/")
+            else -> true
+        }
     }
 
-    // Group spending by category for the Goal Analysis
     val spendingByCategory = filteredExpenses.groupBy { it.category }
         .mapValues { entry -> entry.value.sumOf { it.amount.toDoubleOrNull() ?: 0.0 } }
+
+    val minGoal = budgets.sumOf { it.minLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(1000.0)
+    val maxGoal = budgets.sumOf { it.maxLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(3000.0)
 
     ScreenWrapper(
         title = "Financial Reports",
@@ -71,7 +72,6 @@ fun ReportsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                // PERIOD SELECTOR
                 item {
                     Text("Select Reporting Period", style = MaterialTheme.typography.titleMedium)
                     ExposedDropdownMenuBox(
@@ -79,68 +79,63 @@ fun ReportsScreen(navController: NavController) {
                         onExpandedChange = { expanded = it }
                     ) {
                         OutlinedTextField(
-                            value = "Month: $selectedMonth",
+                            value = selectedPeriod,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
                         )
                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            months.forEach { month ->
-                                DropdownMenuItem(text = { Text(month) }, onClick = {
-                                    selectedMonth = month
+                            periods.forEach { period ->
+                                DropdownMenuItem(text = { Text(period) }, onClick = {
+                                    selectedPeriod = period
                                     expanded = false
                                 })
                             }
                         }
                     }
+                    if (selectedPeriod == "Custom Dates") {
+                        Spacer(Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(value = "01/06/2024", onValueChange = {}, label = { Text("Start") }, modifier = Modifier.weight(1f))
+                            OutlinedTextField(value = "30/06/2024", onValueChange = {}, label = { Text("End") }, modifier = Modifier.weight(1f))
+                        }
+                    }
                     Spacer(Modifier.height(24.dp))
                 }
 
-                // DAILY TIMELINE GRAPH
                 item {
-                    Text("Daily Spending Timeline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    SpendingTimelineGraph(dailySpending)
+                    Text("📊 Category Spending Graph", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    
+                    HorizontalCategorySpendingChart(spendingByCategory, minGoal, maxGoal)
+                    
                     Spacer(Modifier.height(32.dp))
                 }
 
-                // SPENDING GOALS ANALYSIS
                 item {
-                    Text("Spending Goals Analysis", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Category totals vs Min/Max goals", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    Spacer(Modifier.height(16.dp))
+                    Text("Daily Spending Timeline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    
+                    val dailyData = filteredExpenses.groupBy { 
+                        it.date.split("/").firstOrNull() ?: "01" 
+                    }.mapValues { it.value.sumOf { e -> e.amount.toDoubleOrNull() ?: 0.0 } }
+                    
+                    TimelineSpendingChart(dailyData)
+                    
+                    Spacer(Modifier.height(32.dp))
                 }
 
-                if (budgets.isEmpty()) {
-                    item {
-                        Text("No budget goals set. Go to 'My Budgets' to set limits.", modifier = Modifier.padding(vertical = 10.dp))
-                    }
+                item {
+                    Text("Summary Breakdown", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
                 }
 
-                items(budgets) { budget ->
-                    val spent = spendingByCategory[budget.category] ?: 0.0
-                    SpendingGoalVisual(budget, spent)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                
-                // Show categories without budget goals
-                val categoriesWithBudgets = budgets.map { it.category }.toSet()
-                val otherCategories = spendingByCategory.keys.filter { it !in categoriesWithBudgets }
-                
-                if (otherCategories.isNotEmpty()) {
-                    item {
-                        Spacer(Modifier.height(16.dp))
-                        Text("Other Category Spending", style = MaterialTheme.typography.titleMedium)
-                    }
-                    items(otherCategories) { category ->
-                        val spent = spendingByCategory[category] ?: 0.0
-                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(category, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.weight(1f))
-                                Text("Total: R ${String.format("%.2f", spent)}")
-                            }
+                items(spendingByCategory.toList()) { (category, total) ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(category, fontWeight = FontWeight.Bold)
+                            Text("R ${String.format(Locale.US, \"%.2f\", total)}")
                         }
                     }
                 }
@@ -148,42 +143,125 @@ fun ReportsScreen(navController: NavController) {
 
             // Visible Scrollbar indicator
             val scrollbarAlpha by remember {
-                derivedStateOf { if (listState.isScrollInProgress) 1f else 0.4f }
+                derivedStateOf { if (listState.isScrollInProgress) 1f else 0.3f }
             }
             
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp)
-                    .fillMaxHeight(0.7f)
-                    .width(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.Gray.copy(alpha = scrollbarAlpha))
-            )
+                    .padding(end = 4.dp, top = 100.dp, bottom = 100.dp)
+                    .fillMaxHeight()
+                    .width(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color.Gray.copy(alpha = 0.1f))
+            ) {
+                val thumbOffset by remember {
+                    derivedStateOf {
+                        val layoutInfo = listState.layoutInfo
+                        if (layoutInfo.totalItemsCount == 0) 0f
+                        else listState.firstVisibleItemIndex.toFloat() / layoutInfo.totalItemsCount
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.2f)
+                        .graphicsLayer { translationY = thumbOffset * 400.dp.toPx() }
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = scrollbarAlpha), RoundedCornerShape(3.dp))
+                )
+            }
         }
     }
 }
 
 @Composable
-fun SpendingTimelineGraph(dailyData: Map<String, Double>) {
-    val maxDaily = (dailyData.values.maxOrNull() ?: 1.0).coerceAtLeast(100.0)
-    
-    // Colorful palette for the bars
-    val colors = listOf(
-        Color(0xFF6200EE), Color(0xFF03DAC5), Color(0xFFFF0266),
-        Color(0xFFFDD835), Color(0xFF4CAF50), Color(0xFFFF9800),
-        Color(0xFF2196F3), Color(0xFF9C27B0)
-    )
-    
+fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, maxGoal: Double) {
+    if (data.isEmpty()) {
+        Card(modifier = Modifier.fillMaxWidth().height(100.dp)) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Enter expenses to see data")
+            }
+        }
+        return
+    }
+
+    val maxVal = (data.values.maxOrNull() ?: 0.0).coerceAtLeast(maxGoal) * 1.2
+    val barColors = listOf(Color(0xFF6200EE), Color(0xFF03DAC5), Color(0xFFFF0266), Color(0xFFFDD835), Color(0xFF4CAF50), Color(0xFFFF9800))
+
     Card(
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().height(250.dp)) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val height = size.height
+                    val width = size.width
+                    
+                    val maxLineX = (maxGoal / maxVal).toFloat() * width
+                    val minLineX = (minGoal / maxVal).toFloat() * width
+                    
+                    drawLine(
+                        color = Color.Red,
+                        start = Offset(maxLineX, 0f),
+                        end = Offset(maxLineX, height),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                    
+                    drawLine(
+                        color = Color.Blue,
+                        start = Offset(minLineX, 0f),
+                        end = Offset(minLineX, height),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
+                        strokeWidth = 2.dp.toPx()
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    data.entries.forEachIndexed { index, entry ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text(entry.key.take(8), fontSize = 10.sp, modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold)
+                            val barWidthFactor = (entry.value / maxVal).toFloat()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(barWidthFactor.coerceIn(0.01f, 1f))
+                                    .height(24.dp)
+                                    .background(barColors[index % barColors.size], RoundedCornerShape(4.dp))
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("R${entry.value.toInt()}", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+                }
+            }
+            
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Blue: Min Goal (R${minGoal.toInt()})", color = Color.Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("Red: Max Goal (R${maxGoal.toInt()})", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun TimelineSpendingChart(dailyData: Map<String, Double>) {
+    val maxDaily = (dailyData.values.maxOrNull() ?: 1.0).coerceAtLeast(100.0)
+    val colors = listOf(Color(0xFF673AB7), Color(0xFF00BCD4), Color(0xFFFF4081), Color(0xFFFFC107), Color(0xFF4CAF50), Color(0xFFFF5722))
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().height(160.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val width = size.width
                 val height = size.height
-                val barWidth = width / 31f // Max days in month
+                val barWidth = width / 31f 
                 
                 dailyData.forEach { (day, amount) ->
                     val dayIdx = day.toIntOrNull() ?: 1
@@ -192,8 +270,8 @@ fun SpendingTimelineGraph(dailyData: Map<String, Double>) {
                     
                     drawRect(
                         color = colors[dayIdx % colors.size],
-                        topLeft = Offset(x + 2f, height - barHeight),
-                        size = Size(barWidth - 4f, barHeight)
+                        topLeft = Offset(x + 1f, height - barHeight),
+                        size = Size(barWidth - 2f, barHeight)
                     )
                 }
             }
@@ -204,18 +282,17 @@ fun SpendingTimelineGraph(dailyData: Map<String, Double>) {
 @Composable
 fun SpendingGoalVisual(budget: Budget, spent: Double) {
     val min = budget.minLimit.toDoubleOrNull() ?: 0.0
-    val max = budget.maxLimit.toDoubleOrNull() ?: 1.0 // Prevent div by zero
+    val max = budget.maxLimit.toDoubleOrNull() ?: 1.0 
     
     Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(budget.category, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("Spent: R ${String.format("%.2f", spent)}", fontWeight = FontWeight.Bold)
+                Text("Spent: R ${String.format(Locale.US, \"%.2f\", spent)}", fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Visual Graph / Progress Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,9 +303,9 @@ fun SpendingGoalVisual(budget: Budget, spent: Double) {
                 val progress = (spent / displayMax).toFloat().coerceIn(0f, 1f)
                 
                 val barColor = when {
-                    spent < min -> Color(0xFFFFA500) // Under min goal (Orange)
-                    spent <= max -> Color(0xFF4CAF50) // Safe zone (Green)
-                    else -> Color.Red // Exceeded max (Red)
+                    spent < min -> Color(0xFFFFA500) 
+                    spent <= max -> Color(0xFF4CAF50) 
+                    else -> Color.Red 
                 }
                 
                 Box(
@@ -238,36 +315,16 @@ fun SpendingGoalVisual(budget: Budget, spent: Double) {
                         .background(barColor, RoundedCornerShape(12.dp))
                 )
                 
-                // Visual Indicator for Min Goal
                 val minMarker = (min / displayMax).toFloat().coerceIn(0f, 1f)
                 Box(modifier = Modifier.fillMaxWidth(minMarker).fillMaxHeight()) {
-                   VerticalDivider(color = Color.Black.copy(alpha = 0.5f), thickness = 2.dp, modifier = Modifier.align(Alignment.CenterEnd))
+                   VerticalDivider(color = Color.Black.copy(alpha = 0.4f), thickness = 2.dp, modifier = Modifier.align(Alignment.CenterEnd))
                 }
 
-                // Visual Indicator for Max Limit
                 val maxMarker = (max / displayMax).toFloat().coerceIn(0f, 1f)
                 Box(modifier = Modifier.fillMaxWidth(maxMarker).fillMaxHeight()) {
                    VerticalDivider(color = Color.Black, thickness = 2.dp, modifier = Modifier.align(Alignment.CenterEnd))
                 }
             }
-            
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Min: R $min", style = MaterialTheme.typography.labelSmall)
-                Text("Max: R $max", style = MaterialTheme.typography.labelSmall)
-            }
-            
-            val statusText = when {
-                spent < min -> "Below Minimum Goal"
-                spent <= max -> "Within Spending Goals"
-                else -> "Exceeded Maximum Limit!"
-            }
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (spent > max) Color.Red else if (spent < min) Color(0xFFFFA500) else Color(0xFF4CAF50),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 }
