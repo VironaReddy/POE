@@ -23,6 +23,9 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    
     val authState by authViewModel.authState.observeAsState()
 
     ScreenWrapper(
@@ -42,8 +45,7 @@ fun RegisterScreen(
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = authState !is AuthState.Loading
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
 
@@ -51,25 +53,55 @@ fun RegisterScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = authState !is AuthState.Loading
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { 
+                    password = it
+                    passwordError = if (confirmPassword.isNotEmpty() && it != confirmPassword) "Passwords do not match" else null
+                },
                 label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = authState !is AuthState.Loading
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { 
+                    confirmPassword = it
+                    passwordError = if (it != password) "Passwords do not match" else null
+                },
+                label = { Text("Confirm Password") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                isError = passwordError != null
+            )
+            
+            if (passwordError != null) {
+                Text(
+                    text = passwordError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+
             Spacer(Modifier.height(20.dp))
 
             Button(
-                onClick = { authViewModel.signup(email, username, password) },
+                onClick = { 
+                    if (password == confirmPassword) {
+                        authViewModel.signup(email, username, password)
+                    } else {
+                        passwordError = "Passwords do not match"
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = authState !is AuthState.Loading
+                enabled = authState !is AuthState.Loading && password == confirmPassword && password.isNotEmpty()
             ) {
                 if (authState is AuthState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
@@ -79,13 +111,16 @@ fun RegisterScreen(
             }
 
             Spacer(Modifier.height(10.dp))
-            TextButton(onClick = onLoginClick, enabled = authState !is AuthState.Loading) {
-                Text("Already have an account? Login")
+            TextButton(onClick = onLoginClick) {
+                Text("Login?")
             }
 
             when (val state = authState) {
                 is AuthState.Error -> Text(state.message, color = MaterialTheme.colorScheme.error)
-                is AuthState.Authenticated -> LaunchedEffect(Unit) { onRegisterSuccess() }
+                is AuthState.Authenticated -> {
+                    Text("Success! Account created.", color = MaterialTheme.colorScheme.primary)
+                    LaunchedEffect(Unit) { onRegisterSuccess() }
+                }
                 else -> {}
             }
         }

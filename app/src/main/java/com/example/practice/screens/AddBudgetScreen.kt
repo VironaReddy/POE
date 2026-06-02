@@ -19,11 +19,9 @@ fun AddBudgetScreen(
     onSaveDone: () -> Unit,
     onAddCategory: () -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var minLimit by remember { mutableStateOf("") }
-    var maxLimit by remember { mutableStateOf("") }
-    var dateRange by remember { mutableStateOf("") }
+    var budgetAmount by remember { mutableStateOf("") }
+    var minGoal by remember { mutableStateOf("") }
+    var maxGoal by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     
     var selectedCategory by remember { mutableStateOf<BudgetCategory?>(null) }
@@ -38,30 +36,22 @@ fun AddBudgetScreen(
     }
 
     ScreenWrapper(
-        title = "Set Spending Goals",
+        title = "Add Budget Goal",
         navController = navController,
         showBottomBar = false
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Define your spending goals for a category.", style = MaterialTheme.typography.bodyMedium)
+            Text("Set your spending goals per category.", style = MaterialTheme.typography.bodyMedium)
             
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Budget Title") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Category Selection (dropdown add new and display made one name and icon)
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = it }
             ) {
                 OutlinedTextField(
-                    value = selectedCategory?.title ?: "Select Category",
+                    value = selectedCategory?.let { "${it.icon} ${it.title}" } ?: "Select Category",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
@@ -70,7 +60,7 @@ fun AddBudgetScreen(
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("+ Create Category", color = MaterialTheme.colorScheme.primary) },
+                        text = { Text("+ Add New Category", color = MaterialTheme.colorScheme.primary) },
                         onClick = {
                             expanded = false
                             onAddCategory()
@@ -88,43 +78,37 @@ fun AddBudgetScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Budget amount
             OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text("Total Budget Amount (R)") },
+                value = budgetAmount,
+                onValueChange = { budgetAmount = it },
+                label = { Text("Budget Amount (R)") },
                 modifier = Modifier.fillMaxWidth()
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
+            // Min goal and Max goal
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = minLimit,
-                    onValueChange = { minLimit = it },
+                    value = minGoal,
+                    onValueChange = { minGoal = it },
                     label = { Text("Min Goal") },
                     modifier = Modifier.weight(1f).padding(end = 4.dp)
                 )
                 OutlinedTextField(
-                    value = maxLimit,
-                    onValueChange = { maxLimit = it },
-                    label = { Text("Max Limit") },
+                    value = maxGoal,
+                    onValueChange = { maxGoal = it },
+                    label = { Text("Max Goal") },
                     modifier = Modifier.weight(1f).padding(start = 4.dp)
                 )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = dateRange,
-                onValueChange = { dateRange = it },
-                label = { Text("Period (e.g. 2024-10)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
+            // Description
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
@@ -132,27 +116,26 @@ fun AddBudgetScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = {
                     if (selectedCategory != null) {
                         budgetRepo.addBudget(
                             Budget(
-                                title = title,
                                 category = selectedCategory!!.title,
-                                amount = amount,
-                                minLimit = minLimit,
-                                maxLimit = maxLimit,
-                                dateRange = dateRange,
+                                amount = budgetAmount,
+                                minLimit = minGoal,
+                                maxLimit = maxGoal,
                                 description = description
+                                // Title and Period removed as per requirement 11
                             )
                         )
                         onSaveDone()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank() && amount.isNotBlank() && selectedCategory != null
+                enabled = budgetAmount.isNotBlank() && selectedCategory != null
             ) {
                 Text("Save Budget Goal")
             }

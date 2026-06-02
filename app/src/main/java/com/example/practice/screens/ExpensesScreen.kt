@@ -1,6 +1,5 @@
 package com.example.practice.screens
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,11 +9,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.practice.data.ExpenseRepository
+import com.example.practice.data.ExpenseCategoryRepository
 import com.example.practice.model.Expense
+import com.example.practice.model.ExpenseCategory
 import com.example.practice.ui.components.ScreenWrapper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -24,20 +26,22 @@ fun ExpensesScreen(
     onAddClick: () -> Unit
 ) {
     val repo = remember { ExpenseRepository() }
+    val catRepo = remember { ExpenseCategoryRepository() }
+    
     var allExpenses by remember { mutableStateOf(listOf<Expense>()) }
+    var categories by remember { mutableStateOf(listOf<ExpenseCategory>()) }
     var selectedMonth by remember { mutableStateOf("All") }
     var expanded by remember { mutableStateOf(false) }
 
-    val months = listOf("All", "2024-10", "2024-11", "2024-12") // Simplified period selector
+    val months = listOf("All", "10/24", "11/24", "12/24")
 
     LaunchedEffect(Unit) {
         repo.getExpenses { allExpenses = it }
+        catRepo.getCategories { categories = it }
     }
 
-    val filteredExpenses = if (selectedMonth == "All") {
-        allExpenses
-    } else {
-        allExpenses.filter { it.date.startsWith(selectedMonth) }
+    val filteredExpenses = if (selectedMonth == "All") allExpenses else {
+        allExpenses.filter { it.date.contains(selectedMonth) }
     }
 
     ScreenWrapper(
@@ -45,63 +49,59 @@ fun ExpensesScreen(
         navController = navController
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Requirement: User-selectable period
+            // Month Filter
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = it },
                 modifier = Modifier.padding(16.dp)
             ) {
                 OutlinedTextField(
-                    value = "Period: $selectedMonth",
+                    value = "Month: $selectedMonth",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Filter by Period") },
+                    label = { Text("Filter by Month") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     months.forEach { month ->
-                        DropdownMenuItem(
-                            text = { Text(month) },
-                            onClick = {
-                                selectedMonth = month
-                                expanded = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(month) }, onClick = {
+                            selectedMonth = month
+                            expanded = false
+                        })
                     }
                 }
             }
 
             Box(modifier = Modifier.weight(1f)) {
-                if (filteredExpenses.isEmpty()) {
-                    Text("No expenses for this period", modifier = Modifier.padding(16.dp))
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(filteredExpenses) { expense ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text(expense.category, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                                        Text("R ${expense.amount}", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(filteredExpenses) { expense ->
+                        val categoryIcon = categories.find { it.title == expense.category }?.icon ?: "💰"
+                        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(categoryIcon, style = MaterialTheme.typography.headlineSmall)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(expense.category, fontWeight = FontWeight.Bold)
+                                        Text(expense.description, style = MaterialTheme.typography.bodyMedium)
                                     }
-                                    Text(expense.description, style = MaterialTheme.typography.titleMedium)
-                                    Text("Date: ${expense.date} | Time: ${expense.startTime} - ${expense.endTime}", style = MaterialTheme.typography.bodySmall)
-
-                                    // Requirement: Access photo if stored
-                                    if (expense.photoUri.isNotBlank()) {
-                                        Spacer(Modifier.height(8.dp))
-                                        Image(
-                                            painter = rememberAsyncImagePainter(expense.photoUri),
-                                            contentDescription = "Expense Photo",
-                                            modifier = Modifier.fillMaxWidth().height(150.dp),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    }
+                                    Spacer(Modifier.weight(1f))
+                                    Text("R ${expense.amount}", fontWeight = FontWeight.ExtraBold)
+                                }
+                                Text("Date: ${expense.date} | Time: ${expense.startTime} - ${expense.endTime}", style = MaterialTheme.typography.labelSmall)
+                                
+                                if (expense.photoUri.isNotBlank()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Image(
+                                        painter = rememberAsyncImagePainter(expense.photoUri),
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
                                 }
                             }
                         }

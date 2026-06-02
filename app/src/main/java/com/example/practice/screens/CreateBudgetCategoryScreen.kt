@@ -15,6 +15,7 @@ import com.example.practice.data.BudgetCategoryRepository
 import com.example.practice.model.BudgetCategory
 import com.example.practice.ui.components.ScreenWrapper
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateBudgetCategoryScreen(
     navController: NavController
@@ -24,7 +25,7 @@ fun CreateBudgetCategoryScreen(
     var selectedIcon by remember { mutableStateOf("💰") }
     var categories by remember { mutableStateOf(emptyList<BudgetCategory>()) }
     
-    val icons = listOf("💰", "🏠", "🚗", "🍽️", "🛒", "🔌", "🏥", "🛡️", "⛱️", "🎁")
+    val icons = listOf("💰", "🏠", "🚗", "🍽️", "🛒", "🔌", "🏥", "🛡️", "⛱️", "🎁", "📚", "🎮")
 
     LaunchedEffect(Unit) {
         repo.getCategories { categories = it }
@@ -49,7 +50,7 @@ fun CreateBudgetCategoryScreen(
             
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 50.dp),
-                modifier = Modifier.height(120.dp).padding(vertical = 8.dp)
+                modifier = Modifier.height(130.dp).padding(vertical = 8.dp)
             ) {
                 items(icons) { icon ->
                     FilterChip(
@@ -64,17 +65,19 @@ fun CreateBudgetCategoryScreen(
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
-                        repo.addCategory(BudgetCategory(title = title, icon = selectedIcon))
+                        repo.addCategory(BudgetCategory(title = title.trim(), icon = selectedIcon))
                         title = "" // Clear after adding
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = title.isNotBlank()
             ) {
                 Text("Save Category")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
             Text("Existing Categories", style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(categories) { cat ->
