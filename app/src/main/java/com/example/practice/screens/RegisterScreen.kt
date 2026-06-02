@@ -21,6 +21,7 @@ fun RegisterScreen(
     onLoginClick: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val authState by authViewModel.authState.observeAsState()
 
@@ -36,6 +37,15 @@ fun RegisterScreen(
         ) {
             Text("Create account", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(20.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = authState !is AuthState.Loading
+            )
+            Spacer(Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = email,
@@ -57,7 +67,7 @@ fun RegisterScreen(
             Spacer(Modifier.height(20.dp))
 
             Button(
-                onClick = { authViewModel.signup(email, password) },
+                onClick = { authViewModel.signup(email, username, password) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = authState !is AuthState.Loading
             ) {

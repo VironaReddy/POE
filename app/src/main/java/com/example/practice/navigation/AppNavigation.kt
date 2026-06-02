@@ -1,6 +1,8 @@
 package com.example.practice.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,6 +14,7 @@ import com.example.practice.screens.*
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel = remember { AuthViewModel() }
+    val currentUser by authViewModel.currentUser.observeAsState()
 
     // App starts on "entry" as defined by startDestination
     NavHost(
@@ -58,6 +61,38 @@ fun AppNavigation() {
         // HOMEPAGE
         composable("home") { 
             HomeScreen(authViewModel, navController) 
+        }
+
+        // PROFILE
+        composable("profile") {
+            ProfileScreen(
+                navController = navController,
+                authViewModel = authViewModel,
+                user = currentUser
+            )
+        }
+
+        composable("edit_profile") {
+            EditProfileScreen(
+                navController = navController,
+                authViewModel = authViewModel,
+                user = currentUser
+            )
+        }
+
+        // REMINDERS
+        composable("reminders") {
+            Reminder(navController = navController)
+        }
+
+        // REWARDS
+        composable("rewards") {
+            Rewards(navController = navController)
+        }
+
+        // SETTINGS
+        composable("settings") {
+            SettingsPage(navController = navController)
         }
 
         // MY EXPENSE
