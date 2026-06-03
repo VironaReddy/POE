@@ -20,16 +20,18 @@ class ExpenseRepository {
     }
 
     fun getExpenses(onResult: (List<Expense>) -> Unit) {
-        ref.get()
-            .addOnSuccessListener { snapshot ->
+        ref.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("ExpenseRepo", "Listen failed: ${error.message}")
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
                 val list = snapshot.documents.mapNotNull {
                     it.toObject(Expense::class.java)
                 }
                 onResult(list)
             }
-            .addOnFailureListener {
-                Log.e("ExpenseRepo", "Failed to load expenses: ${it.message}")
-                onResult(emptyList())
-            }
+        }
     }
 }
