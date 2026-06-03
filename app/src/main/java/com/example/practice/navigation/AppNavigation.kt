@@ -63,6 +63,11 @@ fun AppNavigation() {
             HomeScreen(authViewModel, navController) 
         }
 
+        // STREAKS
+        composable("streaks") {
+            StreaksScreen(navController = navController)
+        }
+
         // PROFILE
         composable("profile") {
             ProfileScreen(

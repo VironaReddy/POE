@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.practice.ui.components.ScreenWrapper
 
-
 data class RewardBadge(
     val title: String,
     val icon: String,
@@ -85,6 +84,7 @@ fun Rewards(navController: NavController) {
         }
     }
 }
+
 
 @Composable
 fun BadgeCard(badge: RewardBadge) {

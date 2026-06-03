@@ -1,8 +1,10 @@
 package com.example.practice.screens
 
+import android.R.attr.fontWeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -50,7 +52,7 @@ fun ReportsScreen(navController: NavController) {
 
     val filteredExpenses = expenses.filter { 
         when(selectedPeriod) {
-            "This Month" -> it.date.contains("/10/") 
+            "This Month" -> it.date.contains("/10/") // Mock filter
             "Last Month" -> it.date.contains("/09/")
             else -> true
         }
@@ -59,8 +61,8 @@ fun ReportsScreen(navController: NavController) {
     val spendingByCategory = filteredExpenses.groupBy { it.category }
         .mapValues { entry -> entry.value.sumOf { it.amount.toDoubleOrNull() ?: 0.0 } }
 
-    val minGoal = budgets.sumOf { it.minLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(1000.0)
-    val maxGoal = budgets.sumOf { it.maxLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(3000.0)
+    val totalMinGoal = budgets.sumOf { it.minLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(1000.0)
+    val totalMaxGoal = budgets.sumOf { it.maxLimit.toDoubleOrNull() ?: 0.0 }.coerceAtLeast(3000.0)
 
     ScreenWrapper(
         title = "Financial Reports",
@@ -94,26 +96,33 @@ fun ReportsScreen(navController: NavController) {
                             }
                         }
                     }
-                    if (selectedPeriod == "Custom Dates") {
-                        Spacer(Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(value = "01/06/2024", onValueChange = {}, label = { Text("Start") }, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = "30/06/2024", onValueChange = {}, label = { Text("End") }, modifier = Modifier.weight(1f))
-                        }
-                    }
                     Spacer(Modifier.height(24.dp))
                 }
 
                 item {
                     Text("📊 Category Spending Graph", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Amount spent per category", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     Spacer(Modifier.height(16.dp))
                     
-                    HorizontalCategorySpendingChart(spendingByCategory, minGoal, maxGoal)
+                    HorizontalCategorySpendingChart(spendingByCategory, totalMinGoal, totalMaxGoal)
                     
                     Spacer(Modifier.height(32.dp))
                 }
 
                 item {
+                    Text("Spending vs Goals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Visual display of progress relative to goals", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Spacer(Modifier.height(16.dp))
+                }
+
+                items(budgets) { budget ->
+                    val spent = spendingByCategory[budget.category] ?: 0.0
+                    SpendingGoalVisual(budget = budget, spent = spent)
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                item {
+                    Spacer(Modifier.height(20.dp))
                     Text("Daily Spending Timeline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     
@@ -125,50 +134,6 @@ fun ReportsScreen(navController: NavController) {
                     
                     Spacer(Modifier.height(32.dp))
                 }
-
-                item {
-                    Text("Summary Breakdown", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                items(spendingByCategory.toList()) { (category, total) ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(category, fontWeight = FontWeight.Bold)
-                            Text("R ${String.format(Locale.US, \"%.2f\", total)}")
-                        }
-                    }
-                }
-            }
-
-            // Visible Scrollbar indicator
-            val scrollbarAlpha by remember {
-                derivedStateOf { if (listState.isScrollInProgress) 1f else 0.3f }
-            }
-            
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp, top = 100.dp, bottom = 100.dp)
-                    .fillMaxHeight()
-                    .width(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Color.Gray.copy(alpha = 0.1f))
-            ) {
-                val thumbOffset by remember {
-                    derivedStateOf {
-                        val layoutInfo = listState.layoutInfo
-                        if (layoutInfo.totalItemsCount == 0) 0f
-                        else listState.firstVisibleItemIndex.toFloat() / layoutInfo.totalItemsCount
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(0.2f)
-                        .graphicsLayer { translationY = thumbOffset * 400.dp.toPx() }
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = scrollbarAlpha), RoundedCornerShape(3.dp))
-                )
             }
         }
     }
@@ -179,7 +144,7 @@ fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, 
     if (data.isEmpty()) {
         Card(modifier = Modifier.fillMaxWidth().height(100.dp)) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Enter expenses to see data")
+                Text("No data for selected period")
             }
         }
         return
@@ -202,7 +167,7 @@ fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, 
                     val minLineX = (minGoal / maxVal).toFloat() * width
                     
                     drawLine(
-                        color = Color.Red,
+                        color = Color.Red.copy(alpha = 0.5f),
                         start = Offset(maxLineX, 0f),
                         end = Offset(maxLineX, height),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
@@ -210,7 +175,7 @@ fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, 
                     )
                     
                     drawLine(
-                        color = Color.Blue,
+                        color = Color.Blue.copy(alpha = 0.5f),
                         start = Offset(minLineX, 0f),
                         end = Offset(minLineX, height),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f),
@@ -224,12 +189,12 @@ fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, 
                 ) {
                     data.entries.forEachIndexed { index, entry ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                            Text(entry.key.take(8), fontSize = 10.sp, modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold)
+                            Text(entry.key.take(10), fontSize = 10.sp, modifier = Modifier.width(65.dp), fontWeight = FontWeight.Bold)
                             val barWidthFactor = (entry.value / maxVal).toFloat()
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth(barWidthFactor.coerceIn(0.01f, 1f))
-                                    .height(24.dp)
+                                    .height(20.dp)
                                     .background(barColors[index % barColors.size], RoundedCornerShape(4.dp))
                             )
                             Spacer(Modifier.width(8.dp))
@@ -241,8 +206,8 @@ fun HorizontalCategorySpendingChart(data: Map<String, Double>, minGoal: Double, 
             
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Blue: Min Goal (R${minGoal.toInt()})", color = Color.Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text("Red: Max Goal (R${maxGoal.toInt()})", color = Color.Red, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("Blue: Min Total (R${minGoal.toInt()})", color = Color.Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("Red: Max Total (R${maxGoal.toInt()})", color = Color.Red, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -282,47 +247,89 @@ fun TimelineSpendingChart(dailyData: Map<String, Double>) {
 @Composable
 fun SpendingGoalVisual(budget: Budget, spent: Double) {
     val min = budget.minLimit.toDoubleOrNull() ?: 0.0
-    val max = budget.maxLimit.toDoubleOrNull() ?: 1.0 
-    
-    Card(modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(2.dp)) {
+    val max = budget.maxLimit.toDoubleOrNull() ?: 1.0
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(budget.category, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("Spent: R ${String.format(Locale.US, \"%.2f\", spent)}", fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val displayMax = maxOf(max, spent) * 1.1
-                val progress = (spent / displayMax).toFloat().coerceIn(0f, 1f)
-                
-                val barColor = when {
-                    spent < min -> Color(0xFFFFA500) 
-                    spent <= max -> Color(0xFF4CAF50) 
-                    else -> Color.Red 
-                }
-                
+                Text(
+                    budget.category,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Spent: R ${String.format(Locale.US, "%.2f", spent)}",
+                    fontWeight = FontWeight.Bold,
+                    color = if (spent > max)
+                        Color.Red
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(progress)
-                        .fillMaxHeight()
-                        .background(barColor, RoundedCornerShape(12.dp))
-                )
-                
-                val minMarker = (min / displayMax).toFloat().coerceIn(0f, 1f)
-                Box(modifier = Modifier.fillMaxWidth(minMarker).fillMaxHeight()) {
-                   VerticalDivider(color = Color.Black.copy(alpha = 0.4f), thickness = 2.dp, modifier = Modifier.align(Alignment.CenterEnd))
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                ) {
+                    val displayMax = maxOf(max, spent) * 1.1
+                    val progress = (spent / displayMax).toFloat().coerceIn(0f, 1f)
+
+                    val barColor = when {
+                        spent < min -> Color(0xFFFFA500)
+                        spent <= max -> Color(0xFF4CAF50)
+                        else -> Color.Red
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .background(barColor, RoundedCornerShape(10.dp))
+                    )
+
+                    val minMarker = (min / displayMax).toFloat().coerceIn(0f, 1f)
+                    Box(modifier = Modifier.fillMaxWidth(minMarker).fillMaxHeight()) {
+                        VerticalDivider(
+                            color = Color.Blue,
+                            thickness = 2.dp,
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        )
+                    }
+
+                    val maxMarker = (max / displayMax).toFloat().coerceIn(0f, 1f)
+                    Box(modifier = Modifier.fillMaxWidth(maxMarker).fillMaxHeight()) {
+                        VerticalDivider(
+                            color = Color.Red,
+                            thickness = 2.dp,
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        )
+                    }
                 }
 
-                val maxMarker = (max / displayMax).toFloat().coerceIn(0f, 1f)
-                Box(modifier = Modifier.fillMaxWidth(maxMarker).fillMaxHeight()) {
-                   VerticalDivider(color = Color.Black, thickness = 2.dp, modifier = Modifier.align(Alignment.CenterEnd))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Min: R${min.toInt()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Blue
+                    )
+                    Text(
+                        "Max: R${max.toInt()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Red
+                    )
                 }
             }
         }
