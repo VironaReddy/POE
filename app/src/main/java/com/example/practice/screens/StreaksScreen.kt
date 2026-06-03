@@ -38,6 +38,7 @@ fun StreaksScreen(navController: NavController) {
         StreakData("Budget Goal", "Stay within your budget goals.", 1, 3, unit = "Months")
     )
 
+
     ScreenWrapper(
         title = "Streaks",
         navController = navController
